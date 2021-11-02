@@ -4,6 +4,7 @@
 // not use this file except in compliance with the License. You may obtain
 // a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
+//go:build go1.13
 // +build go1.13
 
 package integration
@@ -157,7 +158,7 @@ func TestErrors(t *testing.T) {
 		}{
 			{
 				"CommandError all true",
-				mongo.CommandError{matchCode, "foo", []string{label}, "name", matchWrapped},
+				mongo.CommandError{matchCode, "foo", []string{label}, "name", nil, matchWrapped},
 				true,
 				true,
 				true,
@@ -166,7 +167,7 @@ func TestErrors(t *testing.T) {
 			},
 			{
 				"CommandError all false",
-				mongo.CommandError{otherCode, "bar", []string{"otherError"}, "name", otherWrapped},
+				mongo.CommandError{otherCode, "bar", []string{"otherError"}, "name", nil, otherWrapped},
 				false,
 				false,
 				false,
@@ -175,7 +176,7 @@ func TestErrors(t *testing.T) {
 			},
 			{
 				"CommandError has code not message",
-				mongo.CommandError{matchCode, "bar", []string{}, "name", nil},
+				mongo.CommandError{matchCode, "bar", []string{}, "name", nil, nil},
 				true,
 				false,
 				false,
@@ -330,8 +331,8 @@ func TestErrors(t *testing.T) {
 				err    error
 				result bool
 			}{
-				{"CommandError true", mongo.CommandError{11000, "", nil, "blah", nil}, true},
-				{"CommandError false", mongo.CommandError{100, "", nil, "blah", nil}, false},
+				{"CommandError true", mongo.CommandError{11000, "", nil, "blah", nil, nil}, true},
+				{"CommandError false", mongo.CommandError{100, "", nil, "blah", nil, nil}, false},
 				{
 					"WriteException true in writeConcernError",
 					mongo.WriteException{
@@ -387,7 +388,7 @@ func TestErrors(t *testing.T) {
 					},
 					false,
 				},
-				{"wrapped error", wrappedError{mongo.CommandError{11000, "", nil, "blah", nil}}, true},
+				{"wrapped error", wrappedError{mongo.CommandError{11000, "", nil, "blah", nil, nil}}, true},
 				{"other error type", errors.New("foo"), false},
 			}
 			for _, tc := range testCases {
@@ -406,9 +407,9 @@ func TestErrors(t *testing.T) {
 				err    error
 				result bool
 			}{
-				{"ServerError true", mongo.CommandError{100, "", []string{networkLabel}, "blah", nil}, true},
-				{"ServerError false", mongo.CommandError{100, "", []string{otherLabel}, "blah", nil}, false},
-				{"wrapped error", wrappedError{mongo.CommandError{100, "", []string{networkLabel}, "blah", nil}}, true},
+				{"ServerError true", mongo.CommandError{100, "", []string{networkLabel}, "blah", nil, nil}, true},
+				{"ServerError false", mongo.CommandError{100, "", []string{otherLabel}, "blah", nil, nil}, false},
+				{"wrapped error", wrappedError{mongo.CommandError{100, "", []string{networkLabel}, "blah", nil, nil}}, true},
 				{"other error type", errors.New("foo"), false},
 			}
 			for _, tc := range testCases {
@@ -425,13 +426,13 @@ func TestErrors(t *testing.T) {
 				err    error
 				result bool
 			}{
-				{"context timeout", mongo.CommandError{100, "", []string{"other"}, "blah", context.DeadlineExceeded}, true},
-				{"ServerError NetworkTimeoutError", mongo.CommandError{100, "", []string{"NetworkTimeoutError"}, "blah", nil}, true},
-				{"ServerError ExceededTimeLimitError", mongo.CommandError{100, "", []string{"ExceededTimeLimitError"}, "blah", nil}, true},
-				{"ServerError false", mongo.CommandError{100, "", []string{"other"}, "blah", nil}, false},
-				{"net error true", mongo.CommandError{100, "", []string{"other"}, "blah", netErr{true}}, true},
+				{"context timeout", mongo.CommandError{100, "", []string{"other"}, "blah", nil, context.DeadlineExceeded}, true},
+				{"ServerError NetworkTimeoutError", mongo.CommandError{100, "", []string{"NetworkTimeoutError"}, "blah", nil, nil}, true},
+				{"ServerError ExceededTimeLimitError", mongo.CommandError{100, "", []string{"ExceededTimeLimitError"}, "blah", nil, nil}, true},
+				{"ServerError false", mongo.CommandError{100, "", []string{"other"}, "blah", nil, nil}, false},
+				{"net error true", mongo.CommandError{100, "", []string{"other"}, "blah", nil, netErr{true}}, true},
 				{"net error false", netErr{false}, false},
-				{"wrapped error", wrappedError{mongo.CommandError{100, "", []string{"other"}, "blah", context.DeadlineExceeded}}, true},
+				{"wrapped error", wrappedError{mongo.CommandError{100, "", []string{"other"}, "blah", nil, context.DeadlineExceeded}}, true},
 				{"other error", errors.New("foo"), false},
 			}
 			for _, tc := range testCases {

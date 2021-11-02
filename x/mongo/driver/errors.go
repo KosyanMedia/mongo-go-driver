@@ -217,6 +217,7 @@ type Error struct {
 	Labels          []string
 	Name            string
 	Wrapped         error
+	Details         bsoncore.Document
 	TopologyVersion *description.TopologyVersion
 }
 
@@ -228,6 +229,9 @@ func (e Error) UnsupportedStorageEngine() bool {
 // Error implements the error interface.
 func (e Error) Error() string {
 	if e.Name != "" {
+		if e.Details != nil {
+			return fmt.Sprintf("(%v) %v: %s", e.Name, e.Message, e.Details.String())
+		}
 		return fmt.Sprintf("(%v) %v", e.Name, e.Message)
 	}
 	return e.Message
@@ -342,6 +346,7 @@ func ExtractErrorFromServerResponse(doc bsoncore.Document) error {
 	var ok bool
 	var tv *description.TopologyVersion
 	var wcError WriteCommandError
+	var details []byte
 	elems, err := doc.Elements()
 	if err != nil {
 		return err
@@ -449,6 +454,13 @@ func ExtractErrorFromServerResponse(doc bsoncore.Document) error {
 					}
 				}
 			}
+		case "errInfo":
+			doc, exists := elem.Value().DocumentOK()
+			if !exists {
+				break
+			}
+			details = make([]byte, len(doc))
+			copy(details, doc)
 		case "topologyVersion":
 			doc, ok := elem.Value().DocumentOK()
 			if !ok {
@@ -471,6 +483,7 @@ func ExtractErrorFromServerResponse(doc bsoncore.Document) error {
 			Message:         errmsg,
 			Name:            codeName,
 			Labels:          labels,
+			Details:         details,
 			TopologyVersion: tv,
 		}
 	}

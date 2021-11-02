@@ -55,6 +55,7 @@ func replaceErrors(err error) error {
 			Message: de.Message,
 			Labels:  de.Labels,
 			Name:    de.Name,
+			Details: bson.Raw(de.Details),
 			Wrapped: de.Wrapped,
 		}
 	}
@@ -216,12 +217,16 @@ type CommandError struct {
 	Message string
 	Labels  []string // Categories to which the error belongs
 	Name    string   // A human-readable name corresponding to the error code
-	Wrapped error    // The underlying error, if one exists.
+	Details bson.Raw
+	Wrapped error // The underlying error, if one exists.
 }
 
 // Error implements the error interface.
 func (e CommandError) Error() string {
 	if e.Name != "" {
+		if e.Details != nil {
+			return fmt.Sprintf("(%v) %v: %s", e.Name, e.Message, e.Details.String())
+		}
 		return fmt.Sprintf("(%v) %v", e.Name, e.Message)
 	}
 	return e.Message
